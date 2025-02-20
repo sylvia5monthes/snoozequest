@@ -56,6 +56,7 @@ function _init()
     grav = 0.5 / tilesize -- gravity, sprite is floating down
     maxgrav = 1.0 / tilesize -- maximum gravity
     movespeed = 1.0 / tilesize -- speed of player movement, horizontal or vertical
+    floatspeed = 1.0 / tilesize -- speed of player movement, floating
     
     camerasnap = { -- TODO: figure out exact coordinates
         left = 40,
@@ -73,11 +74,19 @@ end
 function _update()
     player.speed.x = 0 
     
-    if btn(0) then
-        player.speed.x = -movespeed
-    elseif btn(1) then
-        player.speed.x = movespeed
-    elseif btn(5) then
+    if btn(0) or btn(1) or btn(2) then
+        if btn(0) then -- move left
+            player.speed.x = -movespeed
+        end
+        if btn(1) then -- move right
+            player.speed.x = movespeed
+        end
+        if btn(2) then -- move up
+            float(player)
+        end
+    end
+   
+    if btn(5) then
        print("hi")
     end
 
@@ -89,9 +98,25 @@ end
 function _draw()
     cls()
     map(0, 0, 0, 0, screensize.width, screensize.height)
+
+    -- debug hitboxes
+    -- local hbox = player.collision.box.horizontal
+    -- rect(hbox.left*tilesize, hbox.top*tilesize, hbox.right*tilesize, hbox.bottom*tilesize, 8)  -- Red for horizontal
+
+    -- local cbox = player.collision.box.ceiling
+    -- rect(cbox.left*tilesize, cbox.top*tilesize, cbox.right*tilesize, cbox.bottom*tilesize, 9)  -- orange for ceiling
+
+    -- local fbox = player.collision.box.floor
+    -- rect(fbox.left*tilesize, fbox.bottom*tilesize, fbox.right*tilesize, fbox.bottom*tilesize, 10)  -- Green for floor
+
     -- - 8 to center the sprite, accurate collision detection
     spr(player.anim[player.frame], player.x * tilesize, player.y * tilesize - 8, 1, 1, player.mirror)
     print(player.speed.x)
+end
+
+function float(entity)
+    entity.onground = false
+    entity.speed.y = -floatspeed
 end
 
 function applyphysics(entity)
@@ -102,20 +127,54 @@ function applyphysics(entity)
         speed.y = min(speed.y + grav, maxgrav)
     end
 
-    entity.y += speed.y
-    entity.x += speed.x
-
     entity.onground = false
 
-    for tile in gettiles(entity, "floor") do
-        if tile.sprite > 0 then
-            speed.y = 0
-            entity.y = tile.y
-            entity.onground = true
-        end
+    local steps = 1
+    local highestspeed = max(abs(speed.x), abs(speed.y))
+
+    if highestspeed >= 0.25 then
+        steps = ceil(highestspeed / 0.25)
     end
 
-    updatecollisionbox(entity)
+    for i = 1, steps do
+        entity.y += speed.y
+        entity.x += speed.x
+
+        updatecollisionbox(entity)
+
+
+        -- check for collision with walls
+        for tile in gettiles(entity, "horizontal") do
+            if tile.sprite > 0 then
+                if entity.x < tile.x then
+                    entity.x = tile.x - 1
+                else
+                    entity.x = tile.x + 1 
+                end
+            end
+        end
+
+        updatecollisionbox(entity)
+
+        -- check for collision with floor
+        for tile in gettiles(entity, "floor") do
+            if tile.sprite > 0 then
+                speed.y = 0
+                entity.y = tile.y
+                entity.onground = true
+            end
+        end
+
+        updatecollisionbox(entity)
+
+        -- check for collision with ceiling
+        for tile in gettiles(entity, "ceiling") do
+            if tile.sprite > 0 then
+                entity.y = tile.y + 1 + entity.collision.size.vertical.height
+            end
+        end
+    end
+    
 end
 
 function gettiles(entity, boxtype)
@@ -163,23 +222,23 @@ function updatecollisionbox(entity)
 
     entity.collision.box = {
         horizontal = {
-            left = entity.x - size.horizontal.width / 2,
-            top = entity.y - size.vertical.height + (size.vertical.height - size.horizontal.height) / 2,
-            right = entity.x + size.horizontal.width / 2,
-            bottom = entity.y - (size.vertical.height - size.horizontal.height) / 2
+            left = entity.x, -- left bound of entity
+            top = entity.y - 1 + size.horizontal.height / 2,
+            right = entity.x + 1, -- right bound of entity
+            bottom = entity.y - size.horizontal.height / 3
         }, 
 
         floor = {
-            left = entity.x + size.vertical.width / 5,
+            left = entity.x + size.vertical.width / 3,
             top = entity.y - size.vertical.height / 2,
-            right = entity.x + size.vertical.width,
+            right = entity.x + size.vertical.width / 1.1,
             bottom = entity.y
         },
 
         ceiling = {
-            left = entity.x - size.vertical.width / 2,
-            top = entity.y - size.vertical.height,
-            right = entity.x + size.vertical.width / 2,
+            left = entity.x + size.vertical.width / 5,
+            top = entity.y - 1,
+            right = entity.x + 1 - size.vertical.width / 3,
             bottom = entity.y - size.vertical.height / 2
         }
 
