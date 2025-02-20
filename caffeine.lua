@@ -54,9 +54,10 @@ function _init()
     }
 
     grav = 0.5 / tilesize -- gravity, sprite is floating down
-    maxgrav = 1.0 / tilesize -- maximum gravity
+    maxgrav = 50.0 / tilesize -- maximum gravity
     movespeed = 1.0 / tilesize -- speed of player movement, horizontal or vertical
     floatspeed = 1.0 / tilesize -- speed of player movement, floating
+    downspeed = 2.0 / tilesize -- speed of player movement, going down
     
     camerasnap = { -- TODO: figure out exact coordinates
         left = 40,
@@ -74,7 +75,7 @@ end
 function _update()
     player.speed.x = 0 
     
-    if btn(0) or btn(1) or btn(2) then
+    if btn(0) or btn(1) or btn(2) or btn(3) then
         if btn(0) then -- move left
             player.speed.x = -movespeed
         end
@@ -84,10 +85,15 @@ function _update()
         if btn(2) then -- move up
             float(player)
         end
-    end
-   
-    if btn(5) then
-       print("hi")
+        if btn(3) then -- move down
+            go_down(player)
+        else
+            player.godown = false
+        end
+    elseif btn(5) then
+       -- TODO: medidation
+    else 
+        player.godown = false
     end
 
     applyphysics(player)
@@ -119,12 +125,22 @@ function float(entity)
     entity.speed.y = -floatspeed
 end
 
+function go_down(entity)
+    entity.godown = true
+    entity.speed.y = floatspeed
+end
+
 function applyphysics(entity)
     -- apply movement physics to entity
     local speed = entity.speed
-
+    
+    -- for floating
     if not entity.onground then
-        speed.y = min(speed.y + grav, maxgrav)
+        if entity.godown then 
+            speed.y = min(speed.y + grav, maxgrav)
+        else 
+            speed.y = min(speed.y + grav, floatspeed)
+        end
     end
 
     entity.onground = false
@@ -251,15 +267,21 @@ function animate(entity)
         if entity.speed.y < 0 then
             setanim(entity, "floating_up")
         else
-            setanim(entity, "floating_down")
+            if entity.godown then
+                setanim(entity, "move_down")
+            else
+                setanim(entity, "floating_down")
+            end
         end
+    elseif entity.godown then
+        setanim(entity, "smush_down")
     elseif entity.speed.x ~= 0 then 
         setanim(entity, "move_horizontal")
     else
         setanim(entity, "idle")
     end
 
-    entity.animframes += 1 
+    entity.animframes += 1
     entity.frame = (flr(entity.animframes / 8) % #entity.anim) + 1
 
     if entity.speed.x < 0 then
