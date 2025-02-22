@@ -7,8 +7,8 @@ function _init()
 
     player = {
         -- player position in terms of tilesize
-        x = 9,
-        y = 9
+        x = 4,
+        y = 4
     }
     player.speed = {
         -- speed in terms of tilesize in x and y direction
@@ -19,12 +19,10 @@ function _init()
         -- collision boxes in terms of tilesize
         size = {
             horizontal = {
-                -- TODO
                 width = 8 / tilesize,
                 height = 6 / tilesize
             },
             vertical = {
-                -- TODO
                 width = 6 / tilesize,
                 height = 8 / tilesize
             }
@@ -40,7 +38,7 @@ function _init()
         move_horizontal = {4, 5},
         move_down = {24, 25}, --  player is pressing down key
         smush_down = {17, 18},
-        medidate = {11, 12}
+        meditate = {11, 12}
     }
 
     updatecollisionbox(player)
@@ -51,6 +49,8 @@ function _init()
     }
     mapsize = {
         -- TODO: need to figure out
+        width = 128,
+        height = 64
     }
 
     grav = 0.5 / tilesize -- gravity, sprite is floating down
@@ -90,19 +90,51 @@ function _update()
         else
             player.godown = false
         end
-    elseif btn(5) then
+    elseif btn(5) then -- this is the 
        -- TODO: medidation
+       if player.onground then
+            meditate(player)
+       end
     else 
         player.godown = false
+        player.meditating = false
     end
 
     applyphysics(player)
     animate(player)
 
+    local screenx, screeny = player.x * tilesize - cam.x, player.y * tilesize - cam.y
+    if screenx < camerasnap.left then
+        cam.x += screenx - camerasnap.left
+    elseif screenx > camerasnap.right then
+        cam.x += screenx - camerasnap.right
+    else 
+        local center = player.x * tilesize - screensize.width / 2
+        cam.x += (center - cam.x) / 6
+    end
+
+    if screeny < camerasnap.top then
+        cam.y += screeny - camerasnap.top
+    elseif screeny > camerasnap.bottom then
+        cam.y += screeny - camerasnap.bottom
+    else
+        local center = player.y * tilesize - screensize.height / 2
+        cam.y += (center - cam.y) / 6
+    end
+
+    local maxcamx, maxcamy = 
+    max(0, mapsize.width * tilesize - screensize.width), 
+    max(0, mapsize.height * tilesize - screensize.height)
+    
+    cam.x = mid(0, cam.x, maxcamx)
+    cam.y = mid(0, cam.y, maxcamy)
+
 end
 
 function _draw()
+    camera(cam.x, cam.y)
     cls()
+    -- clip(32, 32, 64, 64)
     map(0, 0, 0, 0, screensize.width, screensize.height)
 
     -- debug hitboxes
@@ -128,6 +160,10 @@ end
 function go_down(entity)
     entity.godown = true
     entity.speed.y = floatspeed
+end
+
+function meditate(entity)
+    entity.meditating = true
 end
 
 function applyphysics(entity)
@@ -275,6 +311,8 @@ function animate(entity)
         end
     elseif entity.godown then
         setanim(entity, "smush_down")
+    elseif entity.meditating then
+        setanim(entity, "meditate")
     elseif entity.speed.x ~= 0 then 
         setanim(entity, "move_horizontal")
     else
