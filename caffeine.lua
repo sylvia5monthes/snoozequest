@@ -63,24 +63,56 @@ function _init()
     updatecollisionbox(player)
 
     init_time()
+    iteration = 0
+    game_over = false 
 
     -- types of objects 
     objects = {
-        terrain = { [49] = true,
-                    [52] = true,
-                    [53] = true,
-                    [54] = true,
-                    [55] = true,
-                    [56] = true,
-                    [57] = true, 
-                    [58] = true,
-                    [59] = true,
-                    [60] = true
+        terrain = { [49] = true, [52] = true, [53] = true, [54] = true, [55] = true,
+                    [56] = true, [57] = true, [58] = true, [59] = true, [60] = true
         },
-        disposal = 51,
-        matcha = 38, 
-        coffee = 39,
-        boba = 40
+        disposal = { [34] = true, [35] = true, [50] = true, [51] = true },
+        matcha = {
+            tile = 38, 
+            spill_locations = {
+                -- location 1
+                {x = 8, y = 7}, {x = 9, y = 7}, {x = 10, y = 7}, {x = 11, y = 7},
+                {x = 7, y = 8}, {x = 8, y = 8}, {x = 9, y = 8}, {x = 10, y = 8}, {x = 11, y = 8},
+                -- location 2
+                {x = 17, y = 11},
+                {x = 16, y = 12}, {x = 17, y = 12}, {x = 18, y = 12},
+                {x = 16, y = 13},
+                -- location 3
+                {x = 4, y = 23}, {x = 5, y = 23}, {x = 7, y = 23}, {x = 8, y = 23}
+            }
+        },
+        coffee = {
+            tile = 39,
+            spill_locations = {
+                -- location 1
+                {x = 23, y = 23},
+                {x = 22, y = 24}, {x = 23, y = 24}, {x = 24, y = 24},
+                {x = 20, y = 25}, {x = 21, y = 25}, {x = 22, y = 25}, {x = 23, y = 25}, {x = 24, y = 25}, {x = 25, y = 25},
+                -- location 2
+                {x = 30, y = 21}, {x = 31, y = 21},
+                {x = 33, y = 23}
+            }
+        },
+        boba = {
+            tile = 40, 
+            spill_locations = {
+                -- location 1
+                {x = 26, y = 5}, {x = 27, y = 5},
+                -- location 2
+                {x = 13, y = 14},
+                -- location 3
+                {x = 3, y = 15},
+                {x = 3, y = 16},
+                {x = 4, y = 17}, {x = 5, y = 17},
+                {x = 3, y = 18}, {x = 4, y = 18}, {x = 5, y = 18},
+                {x = 4, y = 19}, {x = 5, y = 19}, {x = 6, y = 19},
+            }
+        }
     }
 
     screensize = {
@@ -113,6 +145,11 @@ function _init()
 end
 
 function _update()
+    if game_over then
+        iteration = min(iteration + 0.3, 17)
+        return
+    end
+
     player.speed.x = 0 
     
     -- player actions / input
@@ -133,11 +170,13 @@ function _update()
         else
             player.godown = false
         end
+        player.meditating = false
     elseif btn(5) then -- this is the 
        -- TODO: medidation
        if player.onground then
             meditate(player)
        end
+       player.godown = false
     else 
         player.godown = false
         player.meditating = false
@@ -205,11 +244,59 @@ function _draw()
         spr(item.sprite, item.x * tilesize, item.y * tilesize - 8, 1, 1, false)
     end
 
-    -- print player consciousness level 
     camera(0, 0)
-    print("drowsiness: " .. player.drowsiness .. "%", 0, 0, 7)
-    -- print time
-    print(format_time(), 0, 8, 7)
+    print("drowsiness: " .. player.drowsiness .. "%", 0, 0, 7) -- print player consciousness level 
+    
+    print(format_time(), 0, 8, 7) -- print time
+
+    -- ending screen
+    if game_over then 
+        if iteration < 16 then
+            draw_game_over()
+        else 
+            cls(0)
+            pal()
+            print("game over", 40, 40, 7)
+            if game_win then
+                -- TODO: TEST
+                print("you win", 40, 50, 7)
+            else
+                print("you lose", 40, 50, 7)
+            end
+        end
+    end
+    
+end
+
+function draw_game_over()
+    -- credit: http://kometbomb.net/pico8/fadegen.html
+    local fadetable = {
+        {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+        {1,1,129,129,129,129,129,129,129,129,0,0,0,0,0},
+        {2,2,2,130,130,130,130,130,128,128,128,128,128,0,0},
+        {3,3,3,131,131,131,131,129,129,129,129,129,0,0,0},
+        {4,4,132,132,132,132,132,132,130,128,128,128,128,0,0},
+        {5,5,133,133,133,133,130,130,128,128,128,128,128,0,0},
+        {6,6,134,13,13,13,141,5,5,5,133,130,128,128,0},
+        {7,6,6,6,134,134,134,134,5,5,5,133,130,128,0},
+        {8,8,136,136,136,136,132,132,132,130,128,128,128,128,0},
+        {9,9,9,4,4,4,4,132,132,132,128,128,128,128,0},
+        {10,10,138,138,138,4,4,4,132,132,133,128,128,128,0},
+        {11,139,139,139,139,3,3,3,3,129,129,129,0,0,0},
+        {12,12,12,140,140,140,140,131,131,131,1,129,129,129,0},
+        {13,13,141,141,5,5,5,133,133,130,129,129,128,128,0},
+        {14,14,14,134,134,141,141,2,2,133,130,130,128,128,0},
+        {15,143,143,134,134,134,134,5,5,5,133,133,128,128,0}
+       }
+    
+    for c = 0, 15 do 
+        if flr(iteration+1) == 16 then
+            pal(c, 0)
+        else
+            pal(c, fadetable[c+1][flr(iteration+1)])
+        end
+    end
+
 end
 
 function float(entity)
@@ -251,12 +338,20 @@ function update_collectible(item)
 
     -- check for collision with disposal area
     for tile in gettiles(item, "horizontal") do
-        if tile.sprite == objects.disposal and item.sprite then
-            player.item = nil
+        if objects.disposal[tile.sprite] and item.sprite then
+            remove_spill()
             player.drowsiness += 20
         end
     end
 
+end
+
+function remove_spill()
+    for i = 1, #objects.matcha.spill_locations do
+        local spill = objects.matcha.spill_locations[i]
+        mset(spill.x, spill.y, 0)
+    end
+    player.item = nil
 end
 
 function update_time()
@@ -369,7 +464,7 @@ function applyphysics(entity)
 
         -- check for collision with collectibles
         for tile in gettiles(entity, "collectible") do
-            if tile.sprite == objects.matcha or tile.sprite == objects.coffee or tile.sprite == objects.boba then
+            if tile.sprite == objects.matcha.tile or tile.sprite == objects.coffee.tile or tile.sprite == objects.boba.tile then
                 pickup_item(tile)
             end
         end
@@ -413,7 +508,6 @@ function check_terrain_collisions(entity)
 end
 
 function pickup_item(tile)
-    -- TODO: check if already holding an item or not
     if not player.item then 
         player.item = {
             x = tile.x,
