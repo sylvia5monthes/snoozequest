@@ -8,6 +8,8 @@ function lerp(v0, v1, t)
 end
 
 function init_player()
+    -- initializes player object
+
     player = {
         -- player position in terms of tilesize
         x = 4,
@@ -46,25 +48,8 @@ function init_player()
     player.drowsiness = 0 -- TODO: implement
 end
 
-function init_time()
-    game_time = {
-        hour = 0, -- 0-10, 0 is 12am, 10 is 10am
-        minute = 0, -- 0-59
-        second = 0, -- 0-59
-        increment_speed = 50, -- speed of incrementing time; TODO: figure out best speed
-        time_counter = 0
-    }
-end
-
-function _init()
-    tilesize = 8 -- size of tile in pixels
-
-    init_player()
-    updatecollisionbox(player)
-
-    init_time()
-    iteration = 0
-    game_over = false 
+function init_collectibles()
+    -- initializes collectibles
 
     -- types of objects 
     objects = {
@@ -84,7 +69,8 @@ function _init()
                 {x = 16, y = 13},
                 -- location 3
                 {x = 4, y = 23}, {x = 5, y = 23}, {x = 7, y = 23}, {x = 8, y = 23}
-            }
+            },
+            music = 1
         },
         coffee = {
             tile = 39,
@@ -96,7 +82,8 @@ function _init()
                 -- location 2
                 {x = 30, y = 21}, {x = 31, y = 21},
                 {x = 33, y = 23}
-            }
+            }, 
+            music = 2
         },
         boba = {
             tile = 40, 
@@ -104,16 +91,131 @@ function _init()
                 -- location 1
                 {x = 26, y = 5}, {x = 27, y = 5},
                 -- location 2
-                {x = 13, y = 14},
+                {x = 13, y = 13}, {x = 13, y = 14},
                 -- location 3
                 {x = 3, y = 15},
                 {x = 3, y = 16},
-                {x = 4, y = 17}, {x = 5, y = 17},
+                {x = 3, y = 17}, {x = 4, y = 17},
                 {x = 3, y = 18}, {x = 4, y = 18}, {x = 5, y = 18},
                 {x = 4, y = 19}, {x = 5, y = 19}, {x = 6, y = 19},
-            }
+            },
+            music = 0
         }
     }
+end
+
+function init_time()
+    -- initializes game time, aka the clock during which it is 
+    -- sleep time and the player must successfully complete the game to fall asleep
+
+    game_time = {
+        hour = 12, -- 12am is 12am, 10 is 10am
+        minute = 0, -- 0-59
+        second = 0, -- 0-59
+        increment_speed = 50, -- bigger number if slower speed; TODO: figure out best speed
+        time_counter = 0
+    }
+end
+
+function init_music_notes()
+    -- initializes music notes
+
+    music_notes = {
+        -- location 1 
+        {
+            -- define the box where the music note can move in, in terms of tilesize
+            box = {
+                left = 15,
+                top = 1,
+                right = 23,
+                bottom = 2
+            },
+            -- color (same as the collectible it corresponds to)
+            color = 15,
+            collectible = objects.boba.tile,
+            -- current position of each music note
+            position = {
+                { x = 16, y = 2, dx = -0.2, dy = 0.2}, 
+                {x = 18, y = 1, dx = -0.2, dy = 0.2},
+            },
+            alive = true,
+            music = objects.boba.music
+        },
+        {
+            box = {
+                left = 1,
+                top = 21,
+                right = 3,
+                bottom = 23
+            },
+            color = 11,
+            collectible = objects.matcha.tile, 
+            position = {{x = 2, y = 22, dx = -0.2, dy = 0.2}},
+            alive = true,
+            music = objects.matcha.music
+        },
+        {
+            box = {
+                left = 23,
+                top = 14,
+                right = 30,
+                bottom = 19
+            },
+            color = 4,
+            collectible = objects.coffee.tile,
+            position = {{x = 24, y = 18, dx = -0.2, dy = 0.2},
+                        {x = 25, y = 17, dx = -0.2, dy = 0.2},
+                        {x = 27, y = 16, dx = -0.2, dy = 0.2},
+                        {x = 28, y = 17, dx = -0.2, dy = 0.2}},
+            alive = true,
+            music = objects.coffee.music
+        },
+        {
+            box = {
+                left = 29,
+                top = 21,
+                right = 29,
+                bottom = 25
+            },
+            color = 4,
+            collectible = objects.coffee.tile,
+            position = {{x = 29, y = 22, dx = 0, dy = -0.2}},
+            alive = true,
+            music = objects.coffee.music
+        },
+        {
+            box = {
+                left = 18,
+                top = 14,
+                right = 21,
+                bottom = 20
+            },
+            color = 11,
+            collectible = objects.matcha.tile,
+            position = {{x = 19, y = 16, dx = -0.2, dy = 0.2},
+                        {x = 20, y = 15, dx = -0.2, dy = 0.2}},
+            alive = true,
+            music = objects.matcha.music
+        }
+        
+    }
+end
+
+function _init()
+    tilesize = 8 -- size of tile in pixels
+
+    init_player()
+    updatecollisionbox(player)
+
+    init_time()
+
+    init_collectibles()
+    init_music_notes()
+
+    playing_music = false
+    iteration = 0
+    game_over = false 
+
 
     screensize = {
         width = 128,
@@ -185,6 +287,8 @@ function _update()
     applyphysics(player)
     animate(player)
     update_collectible(player.item)
+    applyphysics_music_note()
+    update_music(player)
     update_time()
     check_game_state()
 
@@ -236,6 +340,8 @@ function _draw()
     -- local obox = player.collision.box.collectible
     -- rect(obox.left*tilesize, obox.top*tilesize, obox.right*tilesize, obox.bottom*tilesize, 11)  -- collectible
 
+    draw_music_notes()
+
     -- - 8 to center the sprite, accurate collision detection
     spr(player.anim[player.frame], player.x * tilesize, player.y * tilesize - 8, 1, 1, player.mirror)
     -- draw collectible if player is holding one
@@ -244,9 +350,10 @@ function _draw()
         spr(item.sprite, item.x * tilesize, item.y * tilesize - 8, 1, 1, false)
     end
 
+
+    -- reset camera to draw text
     camera(0, 0)
     print("drowsiness: " .. player.drowsiness .. "%", 0, 0, 7) -- print player consciousness level 
-    
     print(format_time(), 0, 8, 7) -- print time
 
     -- ending screen
@@ -266,6 +373,21 @@ function _draw()
         end
     end
     
+end
+
+function draw_music_notes()
+    -- draws all music notes based on their current position and color
+
+    for _, note_group in ipairs(music_notes) do
+        if note_group.alive then
+            for _, note in ipairs(note_group.position) do
+                local x, y = note.x * tilesize, note.y * tilesize
+                pal(7, note_group.color)
+                spr(27, x, y, 1, 1, note.mirror)
+                pal()
+            end
+        end
+    end
 end
 
 function draw_game_over()
@@ -311,6 +433,19 @@ end
 
 function meditate(entity)
     entity.meditating = true
+
+    -- check for collision with music notes by checking if we are meditating in the same 
+    -- box as the music note
+    for _, note_group in ipairs(music_notes) do
+        if entity.x >= note_group.box.left and entity.x <= note_group.box.right and
+            entity.y - 1 >= note_group.box.top and entity.y - 1 <= note_group.box.bottom and 
+            note_group.color == 5 and note_group.alive == true then
+            
+            entity.drowsiness += 4*#note_group.position
+            note_group.alive = false
+        end
+    end
+
 end
 
 function check_game_state()
@@ -321,7 +456,7 @@ function check_game_state()
 end
 
 function update_collectible(item)
-    -- collectible 
+    -- check if player is holding a collectible 
     if not item then 
         return
     end
@@ -339,6 +474,7 @@ function update_collectible(item)
     -- check for collision with disposal area
     for tile in gettiles(item, "horizontal") do
         if objects.disposal[tile.sprite] and item.sprite then
+            set_music_note_color(item.sprite)
             remove_spill()
             player.drowsiness += 20
         end
@@ -346,9 +482,93 @@ function update_collectible(item)
 
 end
 
+function set_music_note_color(sprite)
+    for _, note_group in ipairs(music_notes) do
+        if note_group.collectible == sprite then
+            note_group.color = 5 -- set color to 0 to remove the music note
+        end
+    end
+end
+
+function applyphysics_music_note()
+    for _, note_group in ipairs(music_notes) do
+        local is_hyperactive = (note_group.color ~= 5)
+        local speed = is_hyperactive and 0.3 or 0.05
+
+        for _, note in ipairs(note_group.position) do
+            note.x += note.dx * speed
+            note.y += note.dy * speed
+
+            -- check for wall collisions and adjust direction if necessary
+            local box = note_group.box
+            if note.x <= box.left or note.x >= box.right then
+                note.x = mid(box.left, note.x, box.right)
+                if box.right - box.left > 0 then
+                    local angle = atan2(note.dy, note.dx) + (rnd(0.6) - 0.3)  -- slight random variation
+                    note.dx, note.dy = -cos(angle), sin(angle) -- 🚀 flip x direction, keep y
+                end
+            end
+
+            if note.y <= box.top or note.y >= box.bottom then
+                note.y = mid(box.top, note.y, box.bottom)
+                if box.bottom - box.top > 0 then
+                    local angle = atan2(note.dy, note.dx) + (rnd(0.6) - 0.3)  -- slight random variation
+                    note.dx, note.dy = cos(angle), -sin(angle) -- 🚀 flip y direction, keep x
+                end
+            end
+
+            note.mirror = note.dx > 0
+        end
+    end
+end
+
+function update_music(entity) 
+    -- update music notes
+    local notes_active = false
+    -- set_music_volume(volume)
+
+    for _, note_group in ipairs(music_notes) do
+        for _, note in ipairs(note_group.position) do
+            -- if player is not meditating and is within the box, play the music
+            if  not entity.meditating and entity.x >= note_group.box.left and entity.x <= note_group.box.right and
+                entity.y - 1 >= note_group.box.top and entity.y - 1 <= note_group.box.bottom and note_group.alive == true then
+
+                notes_active = true 
+                
+                if not playing_music then
+                    playing_music = true
+                    if note_group.color ~= 5 then 
+                        music(note_group.music)
+                    else 
+                        music(3)
+                    end
+                end
+            end
+        end
+    end
+
+    -- if player is not meditating and not within the box, stop the music
+    if not notes_active and playing_music then
+        music(-1)
+        playing_music = false
+    end
+end
+
 function remove_spill()
-    for i = 1, #objects.matcha.spill_locations do
-        local spill = objects.matcha.spill_locations[i]
+    -- remove spills corresponding to the item player is holding
+    local item = player.item
+
+    local spill_locations
+    if item.sprite == objects.matcha.tile then
+        spill_locations = objects.matcha.spill_locations
+    elseif item.sprite == objects.coffee.tile then
+        spill_locations = objects.coffee.spill_locations
+    elseif item.sprite == objects.boba.tile then
+        spill_locations = objects.boba.spill_locations
+    end
+
+    for i = 1, #spill_locations do
+        local spill = spill_locations[i]
         mset(spill.x, spill.y, 0)
     end
     player.item = nil
@@ -363,14 +583,13 @@ function update_time()
 end
 
 function increment_time()
-    game_time.second += 1
-    if game_time.second >= 60 then
-        game_time.second = 0
-        game_time.minute += 1
-    end
+    game_time.minute += 1
     if game_time.minute >= 60 then
         game_time.minute = 0
         game_time.hour += 1
+    end
+    if game_time.hour > 12 then
+        game_time.hour = 1
     end
     if game_time.hour == 11 then
         game_over = true --TODO
@@ -381,15 +600,14 @@ end
 function format_time()
     local hour = game_time.hour
     local minute = game_time.minute
-    local second = game_time.second
     local ampm = "am"
     if minute < 10 then
         minute = "0" .. minute
     end
-    if second < 10 then
-        second = "0" .. second
+    if hour < 10 then
+        hour = "0" .. hour
     end
-    return hour .. ":" .. minute .. ":" .. second .. " " .. ampm
+    return hour .. ":" .. minute .. " " .. ampm
 end
 
 function applyphysics(entity)
