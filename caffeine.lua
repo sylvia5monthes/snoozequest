@@ -2,6 +2,19 @@ pico-8 cartridge // http://www.pico-8.com
 version 16
 __lua__
 
+--[[
+References:
+Title: Pico8Platformer
+Author: Enichan
+Date: October 31, 2019
+URL: https://github.com/Enichan/Pico8Platformer
+Software License: MIT License
+
+Title: Pico-8 Color Fade Generator 
+Author: kometbomb
+URL: http://kometbomb.net/pico8/fadegen.html
+]]
+
 -- linear interpolation function
 function lerp(v0, v1, t)
     return v0 + t * (v1 - v0)
@@ -45,7 +58,7 @@ function init_player()
         smush_down = {17, 18},
         meditate = {11, 12}
     }
-    player.drowsiness = 0 -- TODO: implement
+    player.drowsiness = 0 
 end
 
 function init_collectibles()
@@ -58,17 +71,17 @@ function init_collectibles()
         },
         disposal = { [34] = true, [35] = true, [50] = true, [51] = true },
         matcha = {
-            tile = 38, 
+            tile = 38,
             spill_locations = {
                 -- location 1
                 {x = 8, y = 7}, {x = 9, y = 7}, {x = 10, y = 7}, {x = 11, y = 7},
                 {x = 7, y = 8}, {x = 8, y = 8}, {x = 9, y = 8}, {x = 10, y = 8}, {x = 11, y = 8},
                 -- location 2
                 {x = 17, y = 11},
-                {x = 16, y = 12}, {x = 17, y = 12}, {x = 18, y = 12},
+                {x = 16, y = 12}, {x = 17, y = 12}, {x = 18, y = 12}, {x = 19, y = 12},
                 {x = 16, y = 13},
                 -- location 3
-                {x = 4, y = 23}, {x = 5, y = 23}, {x = 7, y = 23}, {x = 8, y = 23}
+                {x = 4, y = 23}, {x = 5, y = 23}, {x = 7, y = 23}, {x = 8, y = 23}, {x = 9, y = 23},
             },
             music = 1
         },
@@ -112,7 +125,7 @@ function init_time()
         hour = 12, -- 12am is 12am, 10 is 10am
         minute = 0, -- 0-59
         second = 0, -- 0-59
-        increment_speed = 50, -- bigger number if slower speed; TODO: figure out best speed
+        increment_speed = 50, -- bigger number if slower speed
         time_counter = 0
     }
 end
@@ -214,15 +227,32 @@ function _init()
 
     playing_music = false
     iteration = 0
-    game_over = false 
+    sleeping_animframes = 0
 
+    game_state = "intro" -- intro, playing, game_over, 
+    intro_index = 1 
+    intro_texts = {
+        {"it's 12 am. your alarm is set",
+        "for 9 am. you are lying in",
+        "bed, unable to fall asleep."},
+        {"ugh, must be the caffeine you",
+        "ingested... your brain can't",
+        "seem to quiet down. vibrant",
+        "colors and strange melodies..."},
+        {"meditating (x) silences the",
+        "mind temporarily but you",
+        "can't help but repeat the",
+        "cycle (x)."},
+        {"can you rid your mind of",
+        "all stimulants and finally",
+        "fall asleep?"}
+    }
 
     screensize = {
         width = 128,
         height = 128
     }
     mapsize = {
-        -- TODO: need to figure out
         width = 35,
         height = 27
     }
@@ -233,7 +263,7 @@ function _init()
     floatspeed = 1.0 / tilesize -- speed of player movement, floating
     downspeed = 2.0 / tilesize -- speed of player movement, going down
     
-    camerasnap = { -- TODO: figure out exact coordinates
+    camerasnap = {
         left = 40,
         top = 16,
         right = screensize.width - 40,
@@ -243,16 +273,28 @@ function _init()
         x = 0,
         y = 0
     }
-
+    
 end
 
 function _update()
-    if game_over then
+    if game_state == "game_over" then
         iteration = min(iteration + 0.3, 17)
         return
     end
 
-    player.speed.x = 0 
+    if game_state == "intro" then
+        if btnp(5) then -- enter key
+            intro_index += 1
+            if intro_index > #intro_texts then
+                game_state = "playing"
+            end
+        end
+        if game_state == "intro" then -- only continue in the code if we begin to play
+            return
+        end
+    end
+
+    player.speed.x = 0
     
     -- player actions / input
     if btn(0) or btn(1) or btn(2) or btn(3) then
@@ -273,8 +315,7 @@ function _update()
             player.godown = false
         end
         player.meditating = false
-    elseif btn(5) then -- this is the 
-       -- TODO: medidation
+    elseif btn(5) then -- meditate
        if player.onground then
             meditate(player)
        end
@@ -322,24 +363,24 @@ function _update()
 end
 
 function _draw()
+
+    if game_state == "intro" then
+        cls()
+        intro_text = intro_texts[intro_index]
+        for i = 1, #intro_text do
+            print(intro_text[i], 10, 10 + i*10, 7)
+        end
+        spr(82, 60, 70, 2, 2, false)
+        print("press (x) to continue", 10, 110, 7)
+        return
+    end
+
     camera(cam.x, cam.y)
     cls()
     -- clip(32, 32, 64, 64)
     map(0, 0, 0, 0, screensize.width, screensize.height)
 
-    -- debug hitboxes
-    -- local hbox = player.collision.box.horizontal
-    -- rect(hbox.left*tilesize, hbox.top*tilesize, hbox.right*tilesize, hbox.bottom*tilesize, 8)  -- horizontal
-
-    -- local cbox = player.collision.box.ceiling
-    -- rect(cbox.left*tilesize, cbox.top*tilesize, cbox.right*tilesize, cbox.bottom*tilesize, 9)  -- ceiling
-
-    -- local fbox = player.collision.box.floor
-    -- rect(fbox.left*tilesize, fbox.top*tilesize, fbox.right*tilesize, fbox.bottom*tilesize, 12)  -- floor
-
-    -- local obox = player.collision.box.collectible
-    -- rect(obox.left*tilesize, obox.top*tilesize, obox.right*tilesize, obox.bottom*tilesize, 11)  -- collectible
-
+    -- draw_hitboxes()
     draw_music_notes()
 
     -- - 8 to center the sprite, accurate collision detection
@@ -357,35 +398,58 @@ function _draw()
     print(format_time(), 0, 8, 7) -- print time
 
     -- ending screen
-    if game_over then 
+    if game_state == "game_over" then
         if iteration < 16 then
             draw_game_over()
         else 
             cls(0)
             pal()
-            print("game over", 40, 40, 7)
+            print("game over", 45, 40, 7)
             if game_win then
-                -- TODO: TEST
-                print("you win", 40, 50, 7)
+                print("you were able to fall asleep ", 10, 50, 7)
+                print("at " .. format_time(), 40, 60, 7)
+                draw_sleeping_player()
             else
-                print("you lose", 40, 50, 7)
+                print("you were unable to fall asleep", 5, 50, 7)
+                spr(82, 55, 80, 2, 2, false)
             end
         end
     end
     
 end
 
+function draw_hitboxes()
+    -- debugging function
+    local hbox = player.collision.box.horizontal
+    rect(hbox.left*tilesize, hbox.top*tilesize, hbox.right*tilesize, hbox.bottom*tilesize, 8)  -- horizontal
+
+    local cbox = player.collision.box.ceiling
+    rect(cbox.left*tilesize, cbox.top*tilesize, cbox.right*tilesize, cbox.bottom*tilesize, 9)  -- ceiling
+
+    local fbox = player.collision.box.floor
+    rect(fbox.left*tilesize, fbox.top*tilesize, fbox.right*tilesize, fbox.bottom*tilesize, 12)  -- floor
+
+    local obox = player.collision.box.collectible
+    rect(obox.left*tilesize, obox.top*tilesize, obox.right*tilesize, obox.bottom*tilesize, 11)  -- collectible
+end
+
 function draw_music_notes()
     -- draws all music notes based on their current position and color
 
     for _, note_group in ipairs(music_notes) do
-        if note_group.alive then
-            for _, note in ipairs(note_group.position) do
-                local x, y = note.x * tilesize, note.y * tilesize
-                pal(7, note_group.color)
-                spr(27, x, y, 1, 1, note.mirror)
-                pal()
-            end
+        -- draw music notes if they are alive and the bounding box is within the screen
+        if note_group.alive and 
+            note_group.box.right >= cam.x / tilesize and
+            note_group.box.left <= (cam.x + screensize.width) / tilesize and
+            note_group.box.bottom >= cam.y / tilesize and 
+            note_group.box.top <= (cam.y + screensize.height) / tilesize then
+
+                for _, note in ipairs(note_group.position) do
+                    local x, y = note.x * tilesize, note.y * tilesize
+                    pal(7, note_group.color)
+                    spr(27, x, y, 1, 1, note.mirror)
+                    pal()
+                end
         end
     end
 end
@@ -421,17 +485,27 @@ function draw_game_over()
 
 end
 
+function draw_sleeping_player()
+    local sleeping_animations = {84, 86, 88}
+    sleeping_animframes += 1
+    local sleeping_frame = flr(sleeping_animframes / 20) % #sleeping_animations + 1
+    spr(sleeping_animations[sleeping_frame], 55, 80, 2, 2, false)
+end 
+
 function float(entity)
+    -- entity floats up
     entity.onground = false
     entity.speed.y = -floatspeed
 end
 
 function go_down(entity)
+    -- entity forcefully goes down
     entity.godown = true
     entity.speed.y = floatspeed
 end
 
 function meditate(entity)
+    -- entity meditates, and we check for collision with music notes during meditation
     entity.meditating = true
 
     -- check for collision with music notes by checking if we are meditating in the same 
@@ -449,13 +523,17 @@ function meditate(entity)
 end
 
 function check_game_state()
+    -- check if player has fallen asleep / game over
+
     if player.drowsiness >= 100 then
-        game_over = true --TODO
-        game_win = true --TODO
+        game_state = "game_over"
+        game_win = true 
     end
 end
 
 function update_collectible(item)
+    -- updates collectible item that player is holding
+
     -- check if player is holding a collectible 
     if not item then 
         return
@@ -483,14 +561,19 @@ function update_collectible(item)
 end
 
 function set_music_note_color(sprite)
+    -- set the color of the music note to 5 after its collectible has been disposed
+
     for _, note_group in ipairs(music_notes) do
         if note_group.collectible == sprite then
-            note_group.color = 5 -- set color to 0 to remove the music note
+            note_group.color = 5 
         end
     end
 end
 
 function applyphysics_music_note()
+    -- apply physics to music notes
+    -- music notes move in a box and bounce off walls at random angles
+
     for _, note_group in ipairs(music_notes) do
         local is_hyperactive = (note_group.color ~= 5)
         local speed = is_hyperactive and 0.3 or 0.05
@@ -522,8 +605,9 @@ function applyphysics_music_note()
     end
 end
 
-function update_music(entity) 
-    -- update music notes
+function update_music(entity)
+    -- update the sound of the music based on player's position wrt music notes
+
     local notes_active = false
     -- set_music_volume(volume)
 
@@ -556,6 +640,7 @@ end
 
 function remove_spill()
     -- remove spills corresponding to the item player is holding
+
     local item = player.item
 
     local spill_locations
@@ -575,6 +660,8 @@ function remove_spill()
 end
 
 function update_time()
+    -- update the clock at specific intervals
+
     game_time.time_counter += 1
     if game_time.time_counter >= game_time.increment_speed then
         increment_time()
@@ -583,6 +670,8 @@ function update_time()
 end
 
 function increment_time()
+    -- increment time by 1 minute everytime the function is called
+
     game_time.minute += 1
     if game_time.minute >= 60 then
         game_time.minute = 0
@@ -591,13 +680,15 @@ function increment_time()
     if game_time.hour > 12 then
         game_time.hour = 1
     end
-    if game_time.hour == 11 then
-        game_over = true --TODO
-        game_win = false --TODO
+    if game_time.hour == 9 then
+        game_state = "game_over"
+        game_win = false
     end
 end
 
 function format_time()
+    -- format time to display on screen
+
     local hour = game_time.hour
     local minute = game_time.minute
     local ampm = "am"
@@ -612,6 +703,7 @@ end
 
 function applyphysics(entity)
     -- apply movement physics to entity
+
     local speed = entity.speed
     
     -- for floating
@@ -658,10 +750,10 @@ function applyphysics(entity)
                         else
                             slopeheight = lerp(slope.offset, slope.offset + slope.height, 1 - xoffset)
                         end
-                        
+
                         -- local slopeheight = lerp(slope.offset, slope.offset + slope.height, alpha)
                         tiletop = tile.y + 1 - slopeheight
-                        
+
                         -- only snap the entity down to the slope's height if it wasn't jumping or on the ground
                         if entity.y < tiletop then
                             tiletop = nil
@@ -670,14 +762,13 @@ function applyphysics(entity)
                 else
                     tiletop = nil
                 end
-                    
                 if tiletop then
                     entity.y = tiletop
                     entity.onground = true
                 end
             end
         end
-        
+
         check_terrain_collisions(entity)
 
         -- check for collision with collectibles
@@ -726,10 +817,14 @@ function check_terrain_collisions(entity)
 end
 
 function pickup_item(tile)
+    -- if player is not already holding an item, pick up the item
+    -- and remove it from the map
+    -- store the item info in player.item
+
     if not player.item then 
         player.item = {
             x = tile.x,
-            y = tile.y,
+            y = tile.y+1,
             sprite = tile.sprite,
             collision = {
                 size = {
@@ -750,6 +845,7 @@ function pickup_item(tile)
 end
 
 function gettiles(entity, boxtype)
+    -- get tiles that the entity is colliding with in the boxtype
     local box = entity.collision.box[boxtype]
     local left, top, right, bottom = 
         flr(box.left), flr(box.top), flr(box.right), flr(box.bottom)
