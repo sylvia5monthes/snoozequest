@@ -31,9 +31,7 @@ Information about player actions is not explicitly provided through direct instr
 Players must interact with different-colored music notes to realize that each color corresponds to a distinct sound and is linked to a specific caffeinated item. Experimenting with actions near these music notes helps players uncover how they can either mute or mimic the sounds—reflecting how focusing can temporarily quiet the mind, yet it's easy to fall into the loop of racing thoughts. Through trial and exploration, players learn that collecting and disposing of caffeinated items in the single trash can near the spawn point removes the associated liquid from the map, weakens the corresponding music notes, and ultimately allows meditation to silence them permanently. This gradual process of discovery, which involves understanding the purpose of actions and collectibles, reinforces the theme of gradually figuring out the mechanics of a restless mind in order to finally achieve sleep.
 
 ### Dynamics
-Outline the core interactions and player experiences that emerge from the mechanics. How does the game encourage specific behaviors, strategies, or engagement over time?
-
-Snooze Quest encourages exploration, experimentation, and strategic map traversal through its mechanics, creating an experience that evolves as the player engages with the game world.
+Snooze Quest encourages exploration, experimentation, and strategic map traversal through its mechanics.
 
 Players must navigate open passages of the map and encounter different music notes to understand how sound interacts with their actions. The presence of discordant, intrusive music notes encourages players to explore ways to control and manipulate sound. By experimenting with meditation (X) and sound copying (Z), players learn that meditation can temporarily or permanently silence music notes, while copying sounds allows them to engage with the game’s auditory elements in a playful, interactive way.
 
