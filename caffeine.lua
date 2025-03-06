@@ -235,6 +235,7 @@ function _init()
     game_state = "intro" -- intro, playing, game_over, 
     intro_index = 1 
     intro_texts = {
+        {"snooze quest", "a game by", "connie xu"},
         {"it's 12 am. your alarm is set",
         "for 9 am. you are lying in",
         "bed, unable to fall asleep."},
@@ -503,6 +504,7 @@ function draw_game_over()
 end
 
 function draw_sleeping_player()
+    -- draw sleeping player sprite animation on the game over screen
     local sleeping_animations = {84, 86, 88}
     sleeping_animframes += 1
     local sleeping_frame = flr(sleeping_animframes / 20) % #sleeping_animations + 1
