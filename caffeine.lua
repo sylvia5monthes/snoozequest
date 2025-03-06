@@ -58,7 +58,8 @@ function init_player()
         smush_down = {17, 18},
         meditate = {11, 12}
     }
-    player.drowsiness = 0 
+    player.drowsiness = 0
+
 end
 
 function init_collectibles()
@@ -82,6 +83,8 @@ function init_collectibles()
                 {x = 16, y = 13},
                 -- location 3
                 {x = 4, y = 23}, {x = 5, y = 23}, {x = 7, y = 23}, {x = 8, y = 23}, {x = 9, y = 23},
+                -- location 4
+                {x = 33, y = 13}, {x = 31, y = 14}, {x = 32, y = 14}, {x = 33, y = 14},
             },
             music = 1
         },
@@ -242,7 +245,7 @@ function _init()
         {"meditating (x) silences the",
         "mind temporarily but you",
         "can't help but repeat the",
-        "cycle (x)."},
+        "cycle (z)."},
         {"can you rid your mind of",
         "all stimulants and finally",
         "fall asleep?"}
@@ -283,7 +286,7 @@ function _update()
     end
 
     if game_state == "intro" then
-        if btnp(5) then -- enter key
+        if btnp(5) then -- x key
             intro_index += 1
             if intro_index > #intro_texts then
                 game_state = "playing"
@@ -315,14 +318,20 @@ function _update()
             player.godown = false
         end
         player.meditating = false
+        player.copying = false
+    elseif btn(4) then -- copy 
+        copy_music(player) 
+        player.meditating = false
     elseif btn(5) then -- meditate
        if player.onground then
             meditate(player)
        end
        player.godown = false
+       player.copying = false
     else 
         player.godown = false
         player.meditating = false
+        player.copying = false
     end
 
     applyphysics(player)
@@ -389,6 +398,14 @@ function _draw()
     if player.item then
         local item = player.item
         spr(item.sprite, item.x * tilesize, item.y * tilesize - 8, 1, 1, false)
+    end
+
+    if player.copying then
+        pal(7, player.copy_color)
+        local note_x = player.x * tilesize + 6 -- Move 6 pixels to the right
+        local note_y = player.y * tilesize - 12 -- Move 12 pixels upward
+        spr(28, note_x, note_y, 1, 1, false)
+        pal()
     end
 
 
@@ -504,6 +521,28 @@ function go_down(entity)
     entity.speed.y = floatspeed
 end
 
+function copy_music(entity)
+    -- entity copies the music note's sound if the entity is within the bounding box
+    
+    -- check if entity is already copying a music note (button is pressed)
+    if entity.copying then
+        return
+    end
+    
+
+    for _, note_group in ipairs(music_notes) do
+        if entity.x >= note_group.box.left and entity.x <= note_group.box.right and
+            entity.y - 1 >= note_group.box.top and entity.y - 1 <= note_group.box.bottom and
+            note_group.alive == true then
+            
+            entity.copying = true
+            entity.copy_color = note_group.color
+            -- echo the music note's sound
+            sfx(note_group.music+4)
+        end
+    end
+end
+
 function meditate(entity)
     -- entity meditates, and we check for collision with music notes during meditation
     entity.meditating = true
@@ -565,7 +604,8 @@ function set_music_note_color(sprite)
 
     for _, note_group in ipairs(music_notes) do
         if note_group.collectible == sprite then
-            note_group.color = 5 
+            note_group.color = 5
+            note_group.music = 3
         end
     end
 end
@@ -621,11 +661,7 @@ function update_music(entity)
                 
                 if not playing_music then
                     playing_music = true
-                    if note_group.color ~= 5 then 
-                        music(note_group.music)
-                    else 
-                        music(3)
-                    end
+                    music(note_group.music)
                 end
             end
         end
